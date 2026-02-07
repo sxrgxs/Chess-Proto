@@ -53,3 +53,9 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+#etc
+.venv/
+.idea/
+__pycache__/
+*.pyc
