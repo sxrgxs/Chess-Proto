@@ -16,75 +16,108 @@ class Game():
 
     def parse_position(self, pos): # must validate that pos is within A1-H8 and raise an error for invalid inputs.
         col_pos = ord(pos[0]) - ord('A') + 1
-        row_pos = ord(pos[1]) + 1
-        if not (1<=row_pos <=8 and 1<=col_pos <= 8):
-            print('Invalid input')
-            return
+        row_pos = ord('8') - ord(pos[1]) + 1
+
+        flag = self.is_inside_board(col_pos, row_pos)
+
+        if not flag:
+            raise ValueError('Outside of board')
+
         return col_pos, row_pos
 
     def add_piece(self, piece, pos): # must reject adding to an occupied square (raise an error).
-        pos.parse_position()
-        if self.board[parsed_pos[0]][parsed_pos[1]] != '.':
-            print('Space is already occupied')
-            return
-        self.board[parsed_pos[0]][parsed_pos[1]] = piece
+        col_pos, row_pos = self.parse_position(pos)
+
+        if self.board[row_pos][col_pos] != '.':
+            raise ValueError('Cell is already occupied')
+
+        self.board[row_pos][col_pos] = piece
+        print('Success')
 
     def to_position(self, row, col):
         pass
 
-    def is_inside_board(self, pos):
-        pass
+    def is_inside_board(self, col_pos, row_pos):
+
+        if not (1<=row_pos <=8 and 1<=col_pos <= 8):
+            return False
+
+        return True
 
     def get_piece(self, pos):
-        pass
+        col_pos, row_pos = self.parse_position(pos)
+
+        cell = self.board[row_pos][col_pos]
+
+        if cell == '.':
+            print(f"Empty cell")
+            return None
+
+        print(f"The piece: {cell.symbol}")
+        return cell
 
     def remove_piece(self, pos): # returns the removed piece or None if empty.
-        pass
+        col_pos, row_pos = self.parse_position(pos)
+
+        cell = self.board[row_pos][col_pos]
+
+        if cell == '.':
+            self.board[row_pos][col_pos] = '.'
+            print(f"Empy cell")
+            return None
+
+        self.board[row_pos][col_pos] = '.'
+        print(f"Removed piece: {cell.symbol}")
+        return cell
 
     def display_board(self):
-        for row in self.board:
-            print(' '.join(row))
+        for col in range(0, 10):
+            for row in range(0, 10):
+                if type(self.board[col][row]) is not str:
+                    print(self.board[col][row].symbol, end = ' ')
+                    continue
+                print(self.board[col][row], end = ' ')
+            print()
 
 class King():
-    symbol = 'Ki'
-
-    def __init__ (self, color):
-        self.color = color
-
-    def available_moves(self, game : 'Game', pos : str): # The method must return destination squares in chess notation
-        # A destination square is allowed if it is on the board and is empty, OR it contains an opponent piece (capture).
-        # A destination square is NOT allowed if it contains a piece of the same color.
-        # King: 1 square in any direction (8 neighbors). Ignore castling and “moving into check”.
-        pass
-
-class Queen():
-    symbol = 'Qu'
-
-    def __init__ (self, color):
-        self.color = color
-
-    def available_moves(self, game : 'Game', pos : str): # The method must return destination squares in chess notation
-        # A destination square is allowed if it is on the board and is empty, OR it contains an opponent piece (capture).
-        # A destination square is NOT allowed if it contains a piece of the same color.
-        # Queen: moves any number of squares horizontally, vertically, or diagonally until blocked
-        pass
-
-class Knight():
-    symbol = 'Kn'
-
     def __init__(self, color):
         self.color = color
         if self.color == 'Black':
-            Knight.symbol = '♚'
+            self.symbol = '♚'
             return
-        self.color = '♔'
+        self.symbol = '♔'
 
-    # A destination square is allowed if it is on the board and is empty, OR it contains an opponent piece (capture).
-    # A destination square is NOT allowed if it contains a piece of the same color.
-    # Knight: L-shape moves (±2, ±1). Knight can jump over pieces (blockers do not matter).
+    def available_moves(self, game, pos):
+        pass
+
+class Queen():
+    def __init__(self, color):
+        self.color = color
+        if self.color == 'Black':
+            self.symbol = '♛'
+            return
+        self.symbol = '♕'
+
+    def available_moves(self, game, pos):
+        pass
+
+class Knight():
+    def __init__(self, color):
+        self.color = color
+        if self.color == 'Black':
+            self.symbol = '♞'
+            return
+        self.symbol = '♘'
+
+    def available_moves(self, game, pos):
+        pass
 
 D = Game()
 
-D.add_piece(Knight, 'E5')
+D.add_piece(Knight('White'), 'B8')
 
+D.add_piece(Queen('Black'), 'B7')
+D.add_piece(Queen('White'), 'B6')
+D.add_piece(Queen('Black'), 'B5')
+D.add_piece(Queen('Black'), 'B4')
 D.display_board()
