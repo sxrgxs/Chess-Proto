@@ -73,20 +73,17 @@ class Game():
         return cell
 
     def display_board(self):
-        for col in range(0, 10):
-            for row in range(0, 10):
-                if type(self.board[col][row]) is not str:
-                    print(self.board[col][row].symbol, end = ' ')
+        for row in range(0, 10):
+            for col in range(0, 10):
+                if type(self.board[row][col]) is not str:
+                    print(self.board[row][col].symbol, end = ' ')
                     continue
-                print(self.board[col][row], end = '　')
+                print(self.board[row][col], end = '　')
             print()
 
     def move(self, fr, to):
         col_pos, row_pos = self.parse_position(fr)
         to_col_pos, to_row_pos = self.parse_position(to)
-
-        flag = self.is_inside_board(col_pos, row_pos)
-        flag1 = self.is_inside_board(to_col_pos, to_row_pos)
 
         if self.board[row_pos][col_pos] == '.':
             print('No piece on cell')
@@ -219,7 +216,7 @@ D.add_piece(Queen('Black'), 'B4')
 
 D.add_piece(King('Black'), 'D1')
 
-some_piece = D.get_piece('B4')
+some_piece = D.get_piece('A1')
 
 print(some_piece.available_moves(D))
 
@@ -239,3 +236,4 @@ D.move('F7', 'D6')
 D.move('D6', 'B7')
 
 D.display_board()
+
