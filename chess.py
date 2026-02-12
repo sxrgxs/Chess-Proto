@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 class Game():
 
     def __init__(self):
@@ -237,3 +239,5 @@ D.move('D6', 'B7')
 
 D.display_board()
 
+a = D.get_piece('B7')
+print(a.available_moves(D))
