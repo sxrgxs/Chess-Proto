@@ -1,23 +1,8 @@
 from abc import ABC, abstractmethod
 
-class Game(ABC):
-    @abstractmethod
-    def add_piece(self, piece, pos): # Adds piece on the chosen pos e.g. 'A1'
-        pass
-    @abstractmethod
-    def remove_piece(self, pos): # Removes piece on the chosen pos e.g. 'A1'
-        pass
-    @abstractmethod
-    def get_piece(self, pos): # Returns object of piece or None
-        pass
-    @abstractmethod
-    def display_board(self): # Prints board
-        pass
-    @abstractmethod
-    def move(self, fr, to): #moves piece from .. to ..
-        pass
+class GameEngine():
 
-class GameEngine(Game):
+    # Private:
 
     def __init__(self):
         self._board = [
@@ -44,17 +29,7 @@ class GameEngine(Game):
 
         return col_pos, row_pos
 
-    def add_piece(self, piece, pos):
-        col_pos, row_pos = self._parse_position(pos)
-
-        if self._board[row_pos][col_pos] != '.':
-            raise ValueError('Cell is already occupied')
-
-        self._board[row_pos][col_pos] = piece
-        piece._position = pos
-        print('Success')
-
-    def to_position(self, row, col):
+    def _to_position(self, row, col):
         flag = self._is_inside_board(row, col)
 
         if not flag:
@@ -62,84 +37,101 @@ class GameEngine(Game):
         return chr(col + 64) + str(9 - row)
 
     def _is_inside_board(self, col_pos, row_pos):
-
         if not (1<=row_pos <=8 and 1<=col_pos <= 8):
             return False
 
         return True
 
-    def get_piece(self, pos):
+    def _val_move(self, fr, to):
+        col_pos, row_pos = self._parse_position(fr)
+        to_col_pos, to_row_pos = self._parse_position(to)
+
+        if self.get_cell(to) is not Empty:
+            self.remove_piece(to)
+
+        self.get_cell(fr)._set_position(to)
+        self._set_cell(self.get_cell(fr), to)
+        self._set_cell('.', fr)
+
+    def _set_cell(self, piece, pos):
         col_pos, row_pos = self._parse_position(pos)
 
-        if self._board[row_pos][col_pos] == '.':
-            print(f"Empty cell")
-            return Empty
-        print(f"The piece: {self._board[row_pos][col_pos]._symbol}")
-        return self._board[row_pos][col_pos]
+        self._board[row_pos][col_pos] = piece
+        if type(piece) is not str: piece._set_position(pos)
+
+    # Public:
+
+    def add_piece(self, piece, pos):
+        if self.get_cell(pos) is not Empty:
+            raise ValueError('Cell is already occupied')
+
+        self._set_cell(piece, pos)
+        print('Success')
 
     def remove_piece(self, pos):
-        col_pos, row_pos = self._parse_position(pos)
+        piece = self.get_cell(pos)
 
-        cell = self._board[row_pos][col_pos]
-
-        if cell == '.':
-            self._board[row_pos][col_pos] = '.'
+        if piece is Empty:
             print(f"Empy cell")
             return None
 
-        self._board[row_pos][col_pos] = '.'
-        print(f"Removed piece: {cell._symbol}")
-        return cell
+        self._set_cell('.', pos)
+        print(f"Removed piece: {piece.symbol}")
+
+    def get_cell(self, pos):
+        col_pos, row_pos = self._parse_position(pos)
+
+        if self._board[row_pos][col_pos] == '.':
+            return Empty
+
+        return self._board[row_pos][col_pos]
 
     def display_board(self):
         for row in range(0, 10):
             for col in range(0, 10):
                 if type(self._board[row][col]) is not str:
-                    print(self._board[row][col]._symbol, end = ' ')
+                    print(self._board[row][col].symbol, end = ' ')
                     continue
                 print(self._board[row][col], end = '　')
             print()
 
     def move(self, fr, to):
-        col_pos, row_pos = self._parse_position(fr)
-        to_col_pos, to_row_pos = self._parse_position(to)
 
-        if self._board[row_pos][col_pos] == '.':
-            print('No piece on cell')
+        if self.get_cell(fr) is Empty:
             return
 
-        if to not in self._board[row_pos][col_pos].available_moves(self):
-            print('Invalid move')
+        if to not in self.get_cell(fr).available_moves(self):
             return
 
-        if self._board[to_row_pos][to_col_pos] != '.':
-            self.remove_piece(to)
-            self._board[row_pos][col_pos]._position = to
-            self._board[to_row_pos][to_col_pos] = self._board[row_pos][col_pos]
-            self._board[row_pos][col_pos] = '.'
-            return
-        self._board[row_pos][col_pos]._position = to
-        self._board[to_row_pos][to_col_pos] = self._board[row_pos][col_pos]
-        self._board[row_pos][col_pos] = '.'
+        self._val_move(fr, to)
 
-class piece(ABC):
+class Piece(ABC):
     def __init__(self, color):
         self._position = None
         self._color = color
+
+    def get_color(self):
+        return self._color
+
+    def get_position(self):
+        return self._position
+
+    def _set_position(self, pos):
+        self._position = pos
 
     @abstractmethod
     def available_moves(self): # Returns list of available moves
         pass
 
-class Empty(piece):
+class Empty(Piece):
     def available_moves(self):
         return []
 
-class King(piece):
+class King(Piece):
     def __init__(self, color):
         super().__init__(color)
         if self._color not in ("White", "Black"): raise ValueError("White/Black only")
-        self._symbol = '♚' if self._color == 'Black' else '♔'
+        self.symbol = '♚' if self._color == 'Black' else '♔'
 
     def available_moves(self, game):
         col_pos, row_pos = game._parse_position(self._position)
@@ -157,16 +149,16 @@ class King(piece):
                 if game._board[row_pos + x][col_pos + y]._color == game._board[row_pos][col_pos]._color:
                     continue
 
-            moves.append(game.to_position(row_pos + x, col_pos + y))
+            moves.append(game._to_position(row_pos + x, col_pos + y))
 
         return moves
 
 
-class Queen(piece):
+class Queen(Piece):
     def __init__(self, color):
         super().__init__(color)
         if self._color not in ("White", "Black"): raise ValueError("White/Black only")
-        self._symbol = '♛' if self._color == 'Black' else '♕'
+        self.symbol = '♛' if self._color == 'Black' else '♕'
 
     def available_moves(self, game):
         col_pos, row_pos = game._parse_position(self._position)
@@ -188,20 +180,20 @@ class Queen(piece):
 
                 if game._board[curr_row_pos][curr_col_pos] != '.':
                     if game._board[curr_row_pos][curr_col_pos]._color != game._board[row_pos][col_pos]._color:
-                        moves.append(game.to_position(curr_row_pos, curr_col_pos))
+                        moves.append(game._to_position(curr_row_pos, curr_col_pos))
                         break
                     break
                 slide += 1
-                moves.append(game.to_position(curr_row_pos, curr_col_pos))
+                moves.append(game._to_position(curr_row_pos, curr_col_pos))
 
         return moves
 
 
-class Knight(piece):
+class Knight(Piece):
     def __init__(self, color):
         super().__init__(color)
         if self._color not in ("White", "Black"): raise ValueError("White/Black only")
-        self._symbol = '♞' if self._color == 'Black' else '♘'
+        self.symbol = '♞' if self._color == 'Black' else '♘'
 
     def available_moves(self, game):
         col_pos, row_pos = game._parse_position(self._position)
@@ -219,7 +211,7 @@ class Knight(piece):
                 if game._board[row_pos + x][col_pos + y]._color == game._board[row_pos][col_pos]._color:
                     continue
 
-            moves.append(game.to_position(row_pos + x, col_pos + y))
+            moves.append(game._to_position(row_pos + x, col_pos + y))
 
         return moves
 
@@ -234,7 +226,7 @@ D.add_piece(Queen('Black'), 'B4')
 
 D.add_piece(King('Black'), 'D1')
 
-some_piece = D.get_piece('A1')
+some_piece = D.get_cell('A1')
 
 print(some_piece.available_moves(D))
 
@@ -255,5 +247,6 @@ D.move('D6', 'B7')
 
 D.display_board()
 
-a = D.get_piece('B7')
+a = D.get_cell('B7')
+
 print(a.available_moves(D))
