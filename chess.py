@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 class GameEngine():
 
-    # Private:
+    # Protected:
 
     def __init__(self):
         self._board = [
@@ -33,7 +33,7 @@ class GameEngine():
         flag = self._is_inside_board(row, col)
 
         if not flag:
-            raise ValueError('Outside of board')
+            return False
         return chr(col + 64) + str(9 - row)
 
     def _is_inside_board(self, col_pos, row_pos):
@@ -96,7 +96,6 @@ class GameEngine():
             print()
 
     def move(self, fr, to):
-
         if self.get_cell(fr) is Empty:
             return
 
@@ -123,33 +122,35 @@ class Piece(ABC):
     def available_moves(self): # Returns list of available moves
         pass
 
-class Empty(Piece):
+class Empty():
     def available_moves(self):
         return []
 
 class King(Piece):
     def __init__(self, color):
         super().__init__(color)
-        if self._color not in ("White", "Black"): raise ValueError("White/Black only")
-        self.symbol = '♚' if self._color == 'Black' else '♔'
+        if self.get_color() not in ("White", "Black"): raise ValueError("White/Black only")
+        self.symbol = '♚' if self.get_color() == 'Black' else '♔'
 
     def available_moves(self, game):
-        col_pos, row_pos = game._parse_position(self._position)
+        curr_pos = self.get_position()
+
+        col_pos, row_pos = game._parse_position(curr_pos)
 
         moves = []
 
         possible_changes = [(1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, 1), (-1, -1), (1, -1)]
 
         for x, y in possible_changes:
-            flag = game._is_inside_board(row_pos + x, col_pos + y)
+            flag = game._to_position(row_pos + x, col_pos + y)
             if not flag:
                 continue
 
-            if game._board[row_pos + x][col_pos + y] != '.':
-                if game._board[row_pos + x][col_pos + y]._color == game._board[row_pos][col_pos]._color:
+            if game.get_cell(flag) is not Empty:
+                if game.get_cell(flag).get_color() == game.get_cell(curr_pos).get_color():
                     continue
 
-            moves.append(game._to_position(row_pos + x, col_pos + y))
+            moves.append(flag)
 
         return moves
 
@@ -157,11 +158,13 @@ class King(Piece):
 class Queen(Piece):
     def __init__(self, color):
         super().__init__(color)
-        if self._color not in ("White", "Black"): raise ValueError("White/Black only")
-        self.symbol = '♛' if self._color == 'Black' else '♕'
+        if self.get_color() not in ("White", "Black"): raise ValueError("White/Black only")
+        self.symbol = '♛' if self.get_color() == 'Black' else '♕'
 
     def available_moves(self, game):
-        col_pos, row_pos = game._parse_position(self._position)
+        curr_pos = self.get_position()
+
+        col_pos, row_pos = game._parse_position(curr_pos)
 
         moves = []
 
@@ -174,17 +177,17 @@ class Queen(Piece):
                 curr_row_pos = row_pos + x * slide
                 curr_col_pos = col_pos + y * slide
 
-                flag = game._is_inside_board(curr_row_pos, curr_col_pos)
+                flag = game._to_position(curr_row_pos, curr_col_pos)
                 if not flag:
                     break
 
-                if game._board[curr_row_pos][curr_col_pos] != '.':
-                    if game._board[curr_row_pos][curr_col_pos]._color != game._board[row_pos][col_pos]._color:
-                        moves.append(game._to_position(curr_row_pos, curr_col_pos))
+                if game.get_cell(flag) is not Empty:
+                    if game.get_cell(flag).get_color() != game.get_cell(curr_pos).get_color():
+                        moves.append(flag)
                         break
                     break
                 slide += 1
-                moves.append(game._to_position(curr_row_pos, curr_col_pos))
+                moves.append(flag)
 
         return moves
 
@@ -196,57 +199,50 @@ class Knight(Piece):
         self.symbol = '♞' if self._color == 'Black' else '♘'
 
     def available_moves(self, game):
-        col_pos, row_pos = game._parse_position(self._position)
+        curr_pos = self.get_position()
+
+        col_pos, row_pos = game._parse_position(curr_pos)
 
         moves = []
 
         possible_changes = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, -2), (-1, 2)]
 
         for x, y in possible_changes:
-            flag = game._is_inside_board(row_pos + x, col_pos + y)
+            flag = game._to_position(row_pos + x, col_pos + y)
             if not flag:
                 continue
 
-            if game._board[row_pos + x][col_pos + y] != '.':
-                if game._board[row_pos + x][col_pos + y]._color == game._board[row_pos][col_pos]._color:
+            if game.get_cell(flag) is not Empty:
+                if game.get_cell(flag).get_color() == game.get_cell(curr_pos).get_color():
                     continue
 
-            moves.append(game._to_position(row_pos + x, col_pos + y))
+            moves.append(flag)
 
         return moves
 
 
-D = GameEngine()
-
-D.add_piece(Knight('White'), 'D6')
-
-D.add_piece(King('Black'), 'B7')
-
-D.add_piece(Queen('Black'), 'B4')
-
-D.add_piece(King('Black'), 'D1')
-
-some_piece = D.get_cell('A1')
-
-print(some_piece.available_moves(D))
-
-D.move('B4', 'D6')
+D= GameEngine()
 
 D.display_board()
 
-D.move('D6', 'D1')
-
-D.move('D1', 'D2')
-D.move('D2', 'D3')
-
-D.add_piece(Knight('White'), 'F7')
-
-D.move('F7', 'D6')
-
-D.move('D6', 'B7')
+D.add_piece(Knight('White'), 'H6')
 
 D.display_board()
 
-a = D.get_cell('B7')
+D.add_piece(King('Black'), 'G8')
 
-print(a.available_moves(D))
+D.display_board()
+
+D.move('H6', 'G4')
+
+D.display_board()
+
+D.move('G4', 'F2')
+
+D.display_board()
+
+D.add_piece(Queen('Black'), 'D5')
+
+D.display_board()
+
+print(D.get_cell('D5').available_moves(D))
