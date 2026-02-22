@@ -19,6 +19,7 @@ class GameEngine():
         ]
 
     def _parse_position(self, pos):
+        pos = pos.strip().upper()
         col_pos = ord(pos[0]) - ord('A') + 1
         row_pos = ord('8') - ord(pos[1]) + 1
 
@@ -30,59 +31,56 @@ class GameEngine():
         return col_pos, row_pos
 
     def _to_position(self, row, col):
-        flag = self._is_inside_board(row, col)
+        flag = self._is_inside_board(col, row)
 
         if not flag:
             return False
         return chr(col + 64) + str(9 - row)
 
     def _is_inside_board(self, col_pos, row_pos):
-        if not (1<=row_pos <=8 and 1<=col_pos <= 8):
+        if not (1 <= row_pos <= 8 and 1 <= col_pos <= 8):
             return False
-
         return True
 
     def _val_move(self, fr, to):
-        col_pos, row_pos = self._parse_position(fr)
-        to_col_pos, to_row_pos = self._parse_position(to)
-
-        if self.get_cell(to) is not Empty:
+        if self.get_piece(to) is not EMPTY_CELL:
             self.remove_piece(to)
 
-        self.get_cell(fr)._set_position(to)
-        self._set_cell(self.get_cell(fr), to)
+        self.get_piece(fr)._set_position(to)
+        self._set_cell(self.get_piece(fr), to)
         self._set_cell('.', fr)
 
     def _set_cell(self, piece, pos):
         col_pos, row_pos = self._parse_position(pos)
 
         self._board[row_pos][col_pos] = piece
-        if type(piece) is not str: piece._set_position(pos)
+        if type(piece) is not str:
+            piece._set_position(pos)
 
     # Public:
 
     def add_piece(self, piece, pos):
-        if self.get_cell(pos) is not Empty:
+        if self.get_piece(pos) is not EMPTY_CELL:
             raise ValueError('Cell is already occupied')
 
         self._set_cell(piece, pos)
         print('Success')
 
     def remove_piece(self, pos):
-        piece = self.get_cell(pos)
+        piece = self.get_piece(pos)
 
-        if piece is Empty:
-            print(f"Empy cell")
+        if piece is EMPTY_CELL:
+            print("Empty cell")
             return None
 
         self._set_cell('.', pos)
         print(f"Removed piece: {piece.symbol}")
 
-    def get_cell(self, pos):
+    def get_piece(self, pos):
         col_pos, row_pos = self._parse_position(pos)
 
         if self._board[row_pos][col_pos] == '.':
-            return Empty
+            return EMPTY_CELL
 
         return self._board[row_pos][col_pos]
 
@@ -90,24 +88,28 @@ class GameEngine():
         for row in range(0, 10):
             for col in range(0, 10):
                 if type(self._board[row][col]) is not str:
-                    print(self._board[row][col].symbol, end = ' ')
+                    print(self._board[row][col].symbol, end=' ')
                     continue
-                print(self._board[row][col], end = '　')
+                print(self._board[row][col], end='　')
             print()
 
     def move(self, fr, to):
-        if self.get_cell(fr) is Empty:
+        if self.get_piece(fr) is EMPTY_CELL:
             return
 
-        if to not in self.get_cell(fr).available_moves(self):
+        if to not in self.get_piece(fr).available_moves(self):
             return
 
         self._val_move(fr, to)
 
+
 class Piece(ABC):
-    def __init__(self, color):
+    def __init__(self, color, symbol):
         self._position = None
-        self._color = color
+        self._color = color.strip().upper()
+        self.symbol = symbol
+        if self.get_color() not in ("WHITE", "BLACK"):
+            raise ValueError("White/Black only")
 
     def get_color(self):
         return self._color
@@ -119,26 +121,24 @@ class Piece(ABC):
         self._position = pos
 
     @abstractmethod
-    def available_moves(self): # Returns list of available moves
+    def available_moves(self, game):
         pass
 
 class Empty():
-    def available_moves(self):
+    def available_moves(self, game):
         return []
+
+EMPTY_CELL = Empty()
 
 class King(Piece):
     def __init__(self, color):
-        super().__init__(color)
-        if self.get_color() not in ("White", "Black"): raise ValueError("White/Black only")
-        self.symbol = '♚' if self.get_color() == 'Black' else '♔'
+        super().__init__(color, '♚' if color.strip().upper() == 'BLACK' else '♔')
 
     def available_moves(self, game):
         curr_pos = self.get_position()
-
         col_pos, row_pos = game._parse_position(curr_pos)
 
         moves = []
-
         possible_changes = [(1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, 1), (-1, -1), (1, -1)]
 
         for x, y in possible_changes:
@@ -146,8 +146,9 @@ class King(Piece):
             if not flag:
                 continue
 
-            if game.get_cell(flag) is not Empty:
-                if game.get_cell(flag).get_color() == game.get_cell(curr_pos).get_color():
+            cell = game.get_piece(flag)
+            if cell is not EMPTY_CELL:
+                if cell.get_color() == self.get_color():
                     continue
 
             moves.append(flag)
@@ -157,17 +158,13 @@ class King(Piece):
 
 class Queen(Piece):
     def __init__(self, color):
-        super().__init__(color)
-        if self.get_color() not in ("White", "Black"): raise ValueError("White/Black only")
-        self.symbol = '♛' if self.get_color() == 'Black' else '♕'
+        super().__init__(color, '♛' if color.strip().upper() == 'BLACK' else '♕')
 
     def available_moves(self, game):
         curr_pos = self.get_position()
-
         col_pos, row_pos = game._parse_position(curr_pos)
 
         moves = []
-
         possible_changes = [(1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, 1), (-1, -1), (1, -1)]
 
         for x, y in possible_changes:
@@ -181,30 +178,27 @@ class Queen(Piece):
                 if not flag:
                     break
 
-                if game.get_cell(flag) is not Empty:
-                    if game.get_cell(flag).get_color() != game.get_cell(curr_pos).get_color():
+                cell = game.get_piece(flag)
+                if cell is not EMPTY_CELL:
+                    if cell.get_color() != self.get_color():
                         moves.append(flag)
-                        break
                     break
-                slide += 1
+
                 moves.append(flag)
+                slide += 1
 
         return moves
 
 
 class Knight(Piece):
     def __init__(self, color):
-        super().__init__(color)
-        if self._color not in ("White", "Black"): raise ValueError("White/Black only")
-        self.symbol = '♞' if self._color == 'Black' else '♘'
+        super().__init__(color, '♞' if color.strip().upper() == 'BLACK' else '♘')
 
     def available_moves(self, game):
         curr_pos = self.get_position()
-
         col_pos, row_pos = game._parse_position(curr_pos)
 
         moves = []
-
         possible_changes = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, -2), (-1, 2)]
 
         for x, y in possible_changes:
@@ -212,8 +206,9 @@ class Knight(Piece):
             if not flag:
                 continue
 
-            if game.get_cell(flag) is not Empty:
-                if game.get_cell(flag).get_color() == game.get_cell(curr_pos).get_color():
+            cell = game.get_piece(flag)
+            if cell is not EMPTY_CELL:
+                if cell.get_color() == self.get_color():
                     continue
 
             moves.append(flag)
@@ -221,28 +216,22 @@ class Knight(Piece):
         return moves
 
 
-D= GameEngine()
-
+D = GameEngine()
 D.display_board()
 
 D.add_piece(Knight('White'), 'H6')
-
 D.display_board()
 
 D.add_piece(King('Black'), 'G8')
-
 D.display_board()
 
 D.move('H6', 'G4')
-
 D.display_board()
 
 D.move('G4', 'F2')
-
 D.display_board()
 
 D.add_piece(Queen('Black'), 'D5')
-
 D.display_board()
 
-print(D.get_cell('D5').available_moves(D))
+print(D.get_piece('D5').available_moves(D))
