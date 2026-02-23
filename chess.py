@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import random
 
 class GameEngine():
 
@@ -17,6 +18,13 @@ class GameEngine():
             ['1', '.', '.', '.', '.', '.', '.', '.', '.', '1'],
             [' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', ' ']
         ]
+        self._curr_state = random.choice(['WHITE', 'BLACK'])
+
+    def get_state(self):
+        return self._curr_state
+
+    def set_state(self, state):
+        self._curr_state = state
 
     def _parse_position(self, pos):
         pos = pos.strip().upper()
@@ -26,7 +34,7 @@ class GameEngine():
         flag = self._is_inside_board(col_pos, row_pos)
 
         if not flag:
-            raise ValueError('Outside of board')
+            raise ValueError
 
         return col_pos, row_pos
 
@@ -49,6 +57,7 @@ class GameEngine():
         self.get_piece(fr)._set_position(to)
         self._set_cell(self.get_piece(fr), to)
         self._set_cell('.', fr)
+        return 1
 
     def _set_cell(self, piece, pos):
         col_pos, row_pos = self._parse_position(pos)
@@ -64,7 +73,6 @@ class GameEngine():
             raise ValueError('Cell is already occupied')
 
         self._set_cell(piece, pos)
-        print('Success')
 
     def remove_piece(self, pos):
         piece = self.get_piece(pos)
@@ -78,10 +86,8 @@ class GameEngine():
 
     def get_piece(self, pos):
         col_pos, row_pos = self._parse_position(pos)
-
         if self._board[row_pos][col_pos] == '.':
             return EMPTY_CELL
-
         return self._board[row_pos][col_pos]
 
     def display_board(self):
@@ -98,9 +104,35 @@ class GameEngine():
             return
 
         if to not in self.get_piece(fr).available_moves(self):
-            return
+            return 0
 
         self._val_move(fr, to)
+
+    def distribute_pieces(self):
+        cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+        cell_list = [c + r for r in ['1','2','3','4','5','6','7', '8'] for c in cols]
+        random.shuffle(cell_list)
+        white_cnt = 0
+        black_cnt = 0
+        pieces = {
+            'WHITE': [(King, random.randint(1, 4)), (Queen,  random.randint(1, 4)), (Knight, random.randint(1, 4))],
+            'BLACK': [(King, random.randint(1, 4)), (Queen,  random.randint(1, 4)), (Knight, random.randint(1, 4))],
+        }
+
+        i = 0
+        for piece, count in pieces['WHITE']:
+            for a in range(count):
+                self.add_piece(piece('WHITE'), cell_list[i])
+                i+=1
+                white_cnt+= 1
+
+        for piece, count in pieces['BLACK']:
+            for a in range(count):
+                self.add_piece(piece('BLACK'), cell_list[i])
+                i+=1
+                black_cnt += 1
+        return white_cnt, black_cnt
 
 
 class Piece(ABC):
@@ -215,23 +247,57 @@ class Knight(Piece):
 
         return moves
 
+while True:
+    key = input("Start a new game? Y/N").strip().upper()
 
-D = GameEngine()
-D.display_board()
+    if key == "N" or key == "NO":
+        print("Goodbye!")
+        exit()
 
-D.add_piece(Knight('White'), 'H6')
-D.display_board()
+    elif key != "Y" and key != "YES":
+        print("No such key! Use N/NO or Y/YES")
+        continue
 
-D.add_piece(King('Black'), 'G8')
-D.display_board()
-
-D.move('H6', 'G4')
-D.display_board()
-
-D.move('G4', 'F2')
-D.display_board()
-
-D.add_piece(Queen('Black'), 'D5')
-D.display_board()
-
-print(D.get_piece('D5').available_moves(D))
+    D = GameEngine()
+    white_cnt, black_cnt = D.distribute_pieces()
+    while white_cnt > 0 and black_cnt > 0:
+        D.display_board()
+        print(f"""    White pieces: {white_cnt}
+    Black pieces: {black_cnt}""")
+        print(f'{D.get_state()}s turn')
+        select_fr = input('Select a piece:').strip().upper()
+        try:
+            selected_piece = D.get_piece(select_fr)
+        except ValueError:
+            print('Outside of board!')
+            continue
+        if selected_piece is EMPTY_CELL:
+            print('Empty cell, select a piece!')
+            continue
+        if selected_piece.get_color() != D.get_state():
+            print(f"That's not your piece, you play as {D.get_state()}")
+            continue
+        print(selected_piece.available_moves(D))
+        select_to = input('Select a cell to move to. If you changed mind type 0').strip().upper()
+        try:
+            if select_to == '0':
+                continue
+            if select_to not in selected_piece.available_moves(D):
+                print('Invalid move!')
+                continue
+        except ValueError:
+            print('Outside of board!')
+            continue
+        selected_piece = D.get_piece(select_to)
+        if selected_piece is not EMPTY_CELL:
+            if selected_piece.get_color() == 'WHITE':
+                white_cnt -= 1
+            else:
+                black_cnt -= 1
+        D.move(select_fr, select_to)
+        if D.get_state() == 'WHITE':
+            D.set_state('BLACK')
+        else:
+            D.set_state('WHITE')
+        continue
+    print(f'The winner is {'whites' if white_cnt > black_cnt else 'blacks'}')
