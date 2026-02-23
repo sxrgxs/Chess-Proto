@@ -1,0 +1,20 @@
+    Encapsulation - data and behavior are bundled inside classes. "GameEngine" keeps
+the board and current color to move (state) as protected attributes (_board, _curr_state), accessible
+only through public methods like get_state(), set_state(), and get_piece(). "Piece"
+internals like _position and _color are also protected, exposed only via getters. Some other methods are
+protected as well to restrict the interaction with inner game logic.
+
+    Abstraction - The "Piece" abstract base class  defines a common interface
+for all pieces without exposing implementation details. The available_moves() method
+is declared as @abstractmethod, forcing every subclass to implement it while hiding
+the specifics from the outside.
+
+    Inheritance - "King", "Queen", and "Knight" all inherit from "Piece", reusing shared logic
+like get_color(), get_position(), and _set_position() without rewriting it. Each subclass
+only defines what's unique to it, its symbol and movement rules.
+
+    Polymorphism - All piece types share the same available_moves(game) interface. The game
+loop calls selected_piece.available_moves(D) without knowing or caring whether it's a "King",
+"Queen", or "Knight" - each responds differently based on its own implementation. The "Empty"
+class also implements available_moves() returning an empty list, through which we easily get
+rid of errors.
